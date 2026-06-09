@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  task-service:
+    build: ./task-service
+    ports:
+      - "8081:8081"
+    container_name: task-service
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "8082:8082"
+    container_name: user-service

@@ -1,0 +1,101 @@
+name: CI - TaskFlow
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  task-service:
+    name: Task Service - Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Run tests and generate JaCoCo report
+        run: |
+          cd task-service
+          chmod +x gradlew
+          ./gradlew test jacocoTestReport
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./task-service/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: task-service
+          fail_ci_if_error: false
+
+      - name: SonarCloud analysis
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          cd task-service
+          ./gradlew sonar
+
+      - name: Build Docker image
+        run: docker build -t task-service:latest ./task-service
+
+  user-service:
+    name: User Service - Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Run tests and generate JaCoCo report
+        run: |
+          cd user-service
+          chmod +x gradlew
+          ./gradlew test jacocoTestReport
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./user-service/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: user-service
+          fail_ci_if_error: false
+
+      - name: SonarCloud analysis
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          cd user-service
+          ./gradlew sonar
+
+      - name: Build Docker image
+        run: docker build -t user-service:latest ./user-service
